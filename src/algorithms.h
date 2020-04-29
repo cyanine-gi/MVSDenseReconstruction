@@ -24,7 +24,7 @@ const double cy = 240;//cy = height(480) - cy_original(240)
 //const int ncc_window_size = 3;    // NCC 取的窗口半宽度
 const int ncc_window_size = 2;    // NCC 取的窗口半宽度
 const int ncc_area = (2 * ncc_window_size + 1) * (2 * ncc_window_size + 1); // NCC窗口面积
-const double min_cov = 0.1;     // 收敛判定：最小方差
+const double min_cov = 0.13;     // 收敛判定：最小方差
 const double max_cov = 3;      // 发散判定：最大方差
 const int max_half_len = 50;
 
@@ -78,7 +78,8 @@ inline bool updateInvDepth(
         cvMatT &invdepth_cov2);
 
 
-void updateImg(const vector<double>& wxyz_pos_ref,const vector<double>& wxyz_pos_curr,const cvMatT& img_ref,const cvMatT& img_curr,cvMatT& inv_depth_map,cvMatT&inv_depth_cov_map)
+void updateImgCPU(const vector<double>& wxyz_pos_ref,const vector<double>& wxyz_pos_curr,const cvMatT& img_ref,const cvMatT& img_curr,cvMatT& inv_depth_map,cvMatT&inv_depth_cov_map,
+                  shared_ptr<cvMatT>pKFValidMap = nullptr)
 {
     SE3d T_ref=SE3d(Quaterniond(wxyz_pos_ref[0], wxyz_pos_ref[1], wxyz_pos_ref[2], wxyz_pos_ref[3]),
                      Vector3d(wxyz_pos_ref[4],wxyz_pos_ref[5],wxyz_pos_ref[6]));
@@ -97,6 +98,17 @@ void updateImg(const vector<double>& wxyz_pos_ref,const vector<double>& wxyz_pos
     {
         for(int x = border_size;x<img_ref.cols-border_size;x++)
         {
+            if(pKFValidMap !=nullptr)
+            {
+                if(pKFValidMap->at<uint8_t>(y,x)==0)//skip NCC calc.
+                {
+                    continue;
+                }
+            }
+            if (inv_depth_cov_map.ptr<double>(y)[x] < min_cov || inv_depth_cov_map.ptr<double>(y)[x] > max_cov) // 深度已收敛或发散
+            {
+                continue;
+            }
 
             bool success = epipolarSearch(img_ref,img_curr,inv_depth_map,inv_depth_cov_map,T_rel,x,y,pt_curr,epipolar_direction);
             if(!success)

@@ -22,7 +22,7 @@ int main()
     cvMatT invdepth = cvMatT(p1_gray->rows, p1_gray->cols, CV_64F, MVSDR::init_invdepth);
     cvMatT invdepth_cov = cvMatT(p1_gray->rows, p1_gray->cols, CV_64F, MVSDR::init_invdepth);
     //const cvMatT& img_ref,const cvMatT& img_curr,cvMatT& inv_depth_map,cvMatT&inv_depth_cov_map
-    MVSDR::updateImg(d1,d2,*p1_gray,*p2_gray,invdepth,invdepth_cov);
+    MVSDR::updateImgCPU(d1,d2,*p1_gray,*p2_gray,invdepth,invdepth_cov);
 
     cvMatT output;
     MVSDR::convertInvDepthToDepth(invdepth,output);

@@ -8,6 +8,8 @@
 #include <string>
 #include <memory>
 #include <deque>
+#include <iostream>
+#include <fstream>
 
 //Typedefs:
 
@@ -28,6 +30,7 @@ class OfflineDataLoader
 {
 private:
     int index = 0;
+    vector<vector<double> > pose_list;
 
     std::string generate_path(int* id=nullptr)
     {
@@ -36,13 +39,41 @@ private:
             *id = index;
         }
         std::stringstream ss;
-        ss<<"data/sequence1/"<<index<<".jpg";
-        std::string ret_val;
-        ss>>ret_val;
+        char buf[1000];
+        memset(buf,0,1000);
+        sprintf(buf,"data/sequence1/images/scene_%3.3d.png",index);
+        //ss<<"data/sequence1/"<<index<<".jpg";
+        std::string ret_val(buf);
+        //ss>>ret_val;
         index++;
         return ret_val;
     }
 public:
+    OfflineDataLoader()
+    {
+        std::ifstream input_stream;
+        input_stream.open("data/sequence1/first_200_frames_traj_over_table_input_sequence.txt");
+        //scene_000.png 1.086410 4.766730 -1.449960 0.789455 0.051299 -0.000779 0.611661
+        std::string line_input;
+        while(std::getline(input_stream,line_input))
+        {
+            auto ss = std::stringstream(line_input);
+            std::string img_path;
+            ss>>img_path;
+            double w,x,y,z,px,py,pz;
+            vector<double> measurement;
+            ss>>px;
+            ss>>py;
+            ss>>pz;
+            ss>>w;
+            ss>>x;
+            ss>>y;
+            ss>>z;
+            measurement.push_back(w);measurement.push_back(x);measurement.push_back(y);measurement.push_back(z);
+            measurement.push_back(px);measurement.push_back(py);measurement.push_back(pz);
+            this->pose_list.push_back(measurement);
+        }
+    }
     static shared_ptr<cvMatT> toGRAY(shared_ptr<cvMatT> pimg)
     {
         auto ret_val = std::make_shared<cvMatT>();
@@ -58,10 +89,14 @@ public:
 #ifdef USE_CV_UMAT
         shared_ptr<cv::UMat> um(new cv::UMat(m->getUMat(cv::ACCESS_RW)
                                       ));
-        return um;
+        return toGRAY(um);
 #else
-        return m;
+        return toGRAY(m);
 #endif
+    }
+    vector<double> get_pose()
+    {
+        return this->pose_list[this->index];
     }
 };
 
